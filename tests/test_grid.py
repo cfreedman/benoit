@@ -1,12 +1,18 @@
-import pytest
+from src.grid import Box, ComplexPoint, Interval
 
-from src.grid import Box, Interval
+
+def test_complex_point():
+    a = ComplexPoint(1, 2)
+
+    assert a * a == ComplexPoint(-3, 4)
+    assert a + a == ComplexPoint(2, 4)
+    assert a.length_squared() == 5
 
 
 def test_interval():
     interval = Interval(min_value=0, max_value=5)
 
-    assert len(interval) == 5
+    assert interval.length() == 5
 
 
 def test_box():
@@ -14,7 +20,5 @@ def test_box():
     y_interval = Interval(min_value=0, max_value=3)
 
     box = Box(x_interval, y_interval)
-
-    print(box.aspect_ratio())
 
     assert box.aspect_ratio() == 3 / 5

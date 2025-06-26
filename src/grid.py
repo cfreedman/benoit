@@ -17,7 +17,7 @@ class ComplexPoint:
 
     def __add__(self, other: "ComplexPoint") -> "ComplexPoint":
         x = self.x + other.x
-        y = self.x + other.y
+        y = self.y + other.y
 
         return ComplexPoint(x, y)
 
@@ -30,7 +30,7 @@ class Interval:
     min_value: float
     max_value: float
 
-    def __len__(self):
+    def length(self):
         return self.max_value - self.min_value
 
 
@@ -40,7 +40,7 @@ class Box:
     y_interval: Interval
 
     def aspect_ratio(self):
-        return len(self.y_interval) / len(self.x_interval)
+        return self.y_interval.length() / self.x_interval.length()
 
 
 @dataclass
@@ -61,21 +61,21 @@ def generate_grid(box: Box, character_width: int) -> Tuple[GridPoints, GridHalfS
     # Adjust for higher line height than single character width?
     character_height = int(aspect_ratio * character_width)
 
-    x_unit_width = len(box.x_interval) / character_width
-    y_unit_width = len(box.y_interval) / character_height
+    x_unit_width = box.x_interval.length() / character_width
+    y_unit_width = box.y_interval.length() / character_height
 
     x_halfstep_width, y_halfstep_width = x_unit_width / 2, y_unit_width / 2
 
     x_grid = np.linspace(
         start=box.x_interval.min_value + x_halfstep_width,
         stop=box.x_interval.max_value - x_halfstep_width,
-        step=character_width,
+        num=character_width,
     )
 
     y_grid = np.linspace(
         start=box.y_interval.min_value + y_halfstep_width,
         stop=box.y_interval.max_value - y_halfstep_width,
-        step=character_height,
+        num=character_height,
     )
 
     grid = GridPoints(x_grid, y_grid)
@@ -107,7 +107,7 @@ class CharacterBlock:
         x_grid = np.linspace(
             start=x_start + x_sample_step / 2,
             stop=x_end - x_sample_step / 2,
-            step=self.sample_size.x,
+            num=self.sample_size.x,
         )
 
         y_start, y_end = (
@@ -120,7 +120,7 @@ class CharacterBlock:
         y_grid = np.linspace(
             start=y_start + y_sample_step / 2,
             stop=y_end - y_sample_step / 2,
-            step=self.sample_size.y,
+            num=self.sample_size.y,
         )
 
         return GridPoints(x_grid, y_grid)
