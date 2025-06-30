@@ -1,25 +1,37 @@
 import numpy as np
-from src.grid import CharacterBlock, ComplexPoint, GridPoints
+from src.grid import ComplexPoint, GridPoints
 
 
-def escape(c_point: ComplexPoint, max_iterations: int) -> int:
-    loop_point = ComplexPoint(0, 0)
-    iter = 0
+class EscapeFractal:
+    def __init__(self, max_iterations: int):
+        self.max_iterations = max_iterations
 
-    while loop_point.length_squared() <= 4 and iter < max_iterations:
-        loop_point = loop_point * loop_point + c_point
-        iter += 1
+    def escape(self, point: ComplexPoint) -> int:
+        pass
 
-    return iter
+    def average_escape(self, grid: GridPoints) -> int:
+        x_matrix, y_matrix = grid.x_matrix, grid.y_matrix
+
+        total = 0
+
+        for i in range(len(grid.x_grid)):
+            for j in range(len(grid.y_grid)):
+                point = ComplexPoint(x_matrix[i, j], y_matrix[i, j])
+                total += self.escape(point)
+
+        return total / (len(grid.x_grid) * len(grid.y_grid))
 
 
-def average_escape(grid: GridPoints, max_iterations: int) -> int:
-    xv, yv = np.meshgrid(grid.x_grid, grid.y_grid, indexing="ij")
+class Mandelbrot(EscapeFractal):
+    def __init__(self, max_iterations: int):
+        super().__init__(max_iterations)
 
-    total = 0
-    for i in range(len(grid.x_grid)):
-        for j in range(len(grid.y_grid)):
-            c_point = ComplexPoint(xv[i, j], yv[i, j])
-            total += escape(c_point, max_iterations)
+    def escape(self, point: ComplexPoint) -> int:
+        loop_point = ComplexPoint(0, 0)
 
-    return total / (len(grid.x_grid) * len(grid.y_grid))
+        iter = 0
+        while loop_point.length_squared() <= 4 and iter < self.max_iterations:
+            loop_point = loop_point * loop_point + point
+            iter += 1
+
+        return iter

@@ -3,6 +3,8 @@ from typing import Tuple
 
 import numpy as np
 
+CHARACTER_ASPECT_RATIO = 2
+
 
 @dataclass
 class ComplexPoint:
@@ -48,79 +50,83 @@ class GridPoints:
     x_grid: np.ndarray
     y_grid: np.ndarray
 
+    x_matrix: np.ndarray
+    y_matrix: np.ndarray
+
+    def steps(self) -> Tuple[float, float]:
+        # Assumes that there are at least two elements in each grid
+        x_step = self.x_grid[1] - self.x_grid[0]
+        y_step = self.y_grid[1] - self.y_grid[0]
+
+        return x_step, y_step
+
 
 @dataclass
 class GridHalfSteps:
-    x_halfstep: float
-    y_halfstep: float
+    x: float
+    y: float
 
 
-def generate_grid(box: Box, character_width: int) -> Tuple[GridPoints, GridHalfSteps]:
-    aspect_ratio = box.aspect_ratio()
-
+def generate_square_grid(
+    start: ComplexPoint, size: float, divisions: int
+) -> GridPoints:
     # Adjust for higher line height than single character width?
-    character_height = int(aspect_ratio * character_width)
+    # height = math.ceil(aspect_ratio * width / CHARACTER_ASPECT_RATIO)
 
-    x_unit_width = box.x_interval.length() / character_width
-    y_unit_width = box.y_interval.length() / character_height
+    x_interval = Interval(start.x, start.x + size)
+    y_interval = Interval(start.y, start.y + size)
+
+    x_unit_width = x_interval.length() / divisions
+    y_unit_width = y_interval.length() / (
+        CHARACTER_ASPECT_RATIO * divisions
+    )  # Compensate for characters having twice the height of width
 
     x_halfstep_width, y_halfstep_width = x_unit_width / 2, y_unit_width / 2
 
     x_grid = np.linspace(
-        start=box.x_interval.min_value + x_halfstep_width,
-        stop=box.x_interval.max_value - x_halfstep_width,
-        num=character_width,
+        start=x_interval.min_value + x_halfstep_width,
+        stop=x_interval.max_value - x_halfstep_width,
+        num=divisions,
     )
 
     y_grid = np.linspace(
-        start=box.y_interval.min_value + y_halfstep_width,
-        stop=box.y_interval.max_value - y_halfstep_width,
-        num=character_height,
+        start=y_interval.min_value + y_halfstep_width,
+        stop=y_interval.max_value - y_halfstep_width,
+        num=int(divisions / CHARACTER_ASPECT_RATIO),
     )
 
-    grid = GridPoints(x_grid, y_grid)
-    grid_halfsteps = GridHalfSteps(x_halfstep_width, y_halfstep_width)
+    x_matrix, y_matrix = np.meshgrid(x_grid, y_grid, indexing="ij")
 
-    return grid, grid_halfsteps
+    grid = GridPoints(x_grid, y_grid, x_matrix, y_matrix)
 
-
-@dataclass
-class SampleSize:
-    x: int
-    y: int
+    return grid
 
 
-@dataclass
-class CharacterBlock:
-    center: ComplexPoint
-    grid_halfsteps: GridHalfSteps
-    sample_size: SampleSize
+def generate_sample_grid(
+    center: ComplexPoint, half_steps: GridHalfSteps, x_divisions: int, y_divisions: int
+) -> GridPoints:
+    x_interval = Interval(center.x - half_steps.x, center.x + half_steps.x)
+    y_interval = Interval(center.y - half_steps.y, center.y + half_steps.y)
 
-    def generate_sample_grid(self):
-        x_start, x_end = (
-            self.center.x - self.grid_halfsteps.x_halfstep,
-            self.center.x + self.grid_halfsteps.x_halfstep,
-        )
+    x_unit_width = x_interval.length() / x_divisions
+    y_unit_width = y_interval.length() / y_divisions
 
-        x_sample_step = (x_end - x_start) / self.sample_size.x
+    x_halfstep_width, y_halfstep_width = x_unit_width / 2, y_unit_width / 2
 
-        x_grid = np.linspace(
-            start=x_start + x_sample_step / 2,
-            stop=x_end - x_sample_step / 2,
-            num=self.sample_size.x,
-        )
+    x_grid = np.linspace(
+        start=x_interval.min_value + x_halfstep_width,
+        stop=x_interval.max_value - x_halfstep_width,
+        num=x_divisions,
+    )
 
-        y_start, y_end = (
-            self.center.y - self.grid_halfsteps.y_halfstep,
-            self.center.y + self.grid_halfsteps.y_halfstep,
-        )
+    y_grid = np.linspace(
+        start=y_interval.min_value + y_halfstep_width,
+        stop=y_interval.max_value - y_halfstep_width,
+        num=y_divisions,
+    )
 
-        y_sample_step = (y_end - y_start) / self.sample_size.y
+    x_matrix, y_matrix = np.meshgrid(x_grid, y_grid, indexing="ij")
 
-        y_grid = np.linspace(
-            start=y_start + y_sample_step / 2,
-            stop=y_end - y_sample_step / 2,
-            num=self.sample_size.y,
-        )
+    grid = GridPoints(x_grid, y_grid, x_matrix, y_matrix)
 
-        return GridPoints(x_grid, y_grid)
+    return grid
