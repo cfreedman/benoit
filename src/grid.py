@@ -103,7 +103,10 @@ def generate_square_grid(
 
 
 def generate_sample_grid(
-    center: ComplexPoint, half_steps: GridHalfSteps, x_divisions: int, y_divisions: int
+    center: ComplexPoint,
+    half_steps: GridHalfSteps,
+    x_divisions: int = 5,
+    y_divisions: int = 5,
 ) -> GridPoints:
     x_interval = Interval(center.x - half_steps.x, center.x + half_steps.x)
     y_interval = Interval(center.y - half_steps.y, center.y + half_steps.y)

@@ -1,5 +1,5 @@
-import numpy as np
-from src.grid import ComplexPoint, GridPoints
+from typing import Callable
+from src.grid import ComplexPoint, GridHalfSteps, GridPoints, generate_sample_grid
 
 
 class EscapeFractal:
@@ -20,6 +20,14 @@ class EscapeFractal:
                 total += self.escape(point)
 
         return total / (len(grid.x_grid) * len(grid.y_grid))
+
+
+def compute_escape(
+    center: ComplexPoint, half_steps: GridHalfSteps, fractal: EscapeFractal
+) -> int:
+    grid = generate_sample_grid(center, half_steps)
+
+    return fractal.average_escape(grid)
 
 
 class Mandelbrot(EscapeFractal):
