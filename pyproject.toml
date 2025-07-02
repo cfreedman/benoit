@@ -5,7 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "numpy>=2.3.1",
+    "numba>=0.61",
+    "numba-cuda>=0.0.12",
+    "numpy>=2.2.6",
     "pytest>=8.4.1",
 ]
 
