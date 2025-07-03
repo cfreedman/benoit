@@ -35,4 +35,4 @@ def test_mandelbrot_gpu_selection():
 
     escape_function = mandelbrot.generate_escape_function(mode="gpu")
 
-    assert isinstance(escape_function, Dispatcher)
+    assert is_jitted(escape_function)
