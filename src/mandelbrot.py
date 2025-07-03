@@ -1,76 +1,10 @@
 from typing import Callable, Literal
 
 import numpy as np
-from numba import jit
+from numba import njit
 from numba import cuda
 
-
-class EscapeFractal:
-    def __init__(
-        self,
-        base_function,
-        jit_function,
-        gpu_function,
-        max_iterations: int,
-        **parameters,
-    ):
-        self.base_function = base_function
-        self.jit_function = jit_function
-        self.gpu_function = gpu_function
-        self.max_iterations = max_iterations
-        self.parameters = parameters
-
-    def generate_escape_function(
-        self, mode: Literal["normal", "jit", "gpu"]
-    ) -> Callable:
-        def compute_escape(input_x: float, input_y: float) -> int:
-            return self.base_function(
-                input_x, input_y, self.max_iterations, **self.parameters
-            )
-
-        @jit
-        def compute_escape_jit(input_x: float, input_y: float) -> int:
-            return self.jit_function(
-                input_x, input_y, self.max_iterations, **self.parameters
-            )
-
-        @cuda.jit
-        def compute_escape_gpu(input_x: float, input_y: float) -> int:
-            return self.gpu_function(
-                input_x, input_y, self.max_iterations, **self.parameters
-            )
-
-        return (
-            compute_escape
-            if mode == "normal"
-            else compute_escape_jit
-            if mode == "jit"
-            else compute_escape_gpu
-        )
-
-    def generate_average_escape_function(
-        self, mode: Literal["normal", "jit", "gpu"]
-    ) -> Callable:
-        computed_escape_function = self.generate_escape_function(mode)
-
-        def average_escape(
-            x_matrix: np.ndarray,
-            y_matrix: np.ndarray,
-        ) -> float:
-            x_length, y_length = x_matrix.shape
-
-            total = 0
-            for i in range(x_length):
-                for j in range(y_length):
-                    total += computed_escape_function(x_matrix[i, j], y_matrix[i, j])
-            return total / (x_length * y_length)
-
-        if mode == "normal":
-            return average_escape
-        elif mode == "jit":
-            return jit(average_escape)
-        else:
-            return cuda.jit(average_escape)
+from src.escape_fractal import EscapeFractal
 
 
 def mandelbrot_escape(input_x: float, input_y: float, max_iterations: int) -> int:
@@ -86,7 +20,7 @@ def mandelbrot_escape(input_x: float, input_y: float, max_iterations: int) -> in
     return iter
 
 
-@jit
+@njit
 def mandelbrot_escape_jit(input_x: float, input_y: float, max_iterations: int) -> int:
     x_loop = y_loop = 0
 
@@ -119,8 +53,29 @@ def mandelbrot_escape_gpu_jit(
 class Mandelbrot(EscapeFractal):
     def __init__(self, max_iterations: int):
         super().__init__(
+            max_iterations=max_iterations,
             base_function=mandelbrot_escape,
             jit_function=mandelbrot_escape_jit,
-            gpu_function=mandelbrot_escape_gpu_jit,
+        )
+
+
+class MandelbrotJIT(EscapeFractal):
+    def __init__(self, max_iterations: int):
+        super().__init__(
+            max_iterations=max_iterations,
+        )
+
+    @staticmethod
+    def build_escape_function(max_iterations: int) -> Callable:
+        @njit
+        def escape_function(input_x: float, input_y: float) -> int:
+            return mandelbrot_escape_jit(input_x, input_y, max_iterations)
+
+        return escape_function
+
+
+class MandelbrotGPU(EscapeFractal):
+    def __init__(self, max_iterations: int):
+        super().__init__(
             max_iterations=max_iterations,
         )
