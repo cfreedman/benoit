@@ -1,7 +1,7 @@
 from math import sqrt
+from typing import Callable, Literal
 
-import numpy as np
-from numba import jit, cuda
+from numba import njit, cuda
 
 from src.grid import ComplexPoint
 from src.mandelbrot import EscapeFractal
@@ -21,15 +21,16 @@ def julia_escape(
     iter = 0
 
     while (x_loop**2 + y_loop**2) <= boundary**2 and iter < max_iterations:
-        x_loop = x_loop**2 - y_loop**2 + parameter_x
+        x_new = x_loop**2 - y_loop**2 + parameter_x
         y_loop = 2 * x_loop * y_loop + parameter_y
+        x_loop = x_new
 
         iter += 1
 
     return iter
 
 
-@jit
+@njit
 def julia_escape_jit(
     input_x: float,
     input_y: float,
@@ -44,8 +45,9 @@ def julia_escape_jit(
     iter = 0
 
     while (x_loop**2 + y_loop**2) <= boundary**2 and iter < max_iterations:
-        x_loop = x_loop**2 - y_loop**2 + parameter_x
+        x_new = x_loop**2 - y_loop**2 + parameter_x
         y_loop = 2 * x_loop * y_loop + parameter_y
+        x_loop = x_new
 
         iter += 1
 
@@ -67,8 +69,9 @@ def julia_escape_gpu(
     iter = 0
 
     while (x_loop**2 + y_loop**2) <= boundary**2 and iter < max_iterations:
-        x_loop = x_loop**2 - y_loop**2 + parameter_x
+        x_new = x_loop**2 - y_loop**2 + parameter_x
         y_loop = 2 * x_loop * y_loop + parameter_y
+        x_loop = x_new
 
         iter += 1
 
@@ -77,39 +80,31 @@ def julia_escape_gpu(
 
 class JuliaSet(EscapeFractal):
     def __init__(self, max_iterations: int, parameter: ComplexPoint):
-        super().__init__(max_iterations=max_iterations, parameter=parameter)
+        super().__init__(
+            max_iterations=max_iterations,
+            base_function=julia_escape,
+            jit_function=julia_escape_jit,
+        )
+        self.parameter_x = parameter.x
+        self.parameter_y = parameter.y
 
-    def build_escape_function(self):
-        def escape_function(input_x: float, input_y: float) -> int:
-            return julia_escape(
-                input_x,
-                input_y,
-                self.max_iterations,
-                self.parameter.x,
-                self.parameter.y,
-            )
+    def _make_escape_function(self, mode: Literal["normal", "jit", "gpu"]) -> Callable:
+        max_iterations = self.max_iterations
+        parameter_x, parameter_y = self.parameter_x, self.parameter_y
 
-        return escape_function
+        if mode == "normal":
 
+            def bound_escape_function(input_x: float, input_y: float) -> int:
+                return self.base_function(
+                    input_x, input_y, max_iterations, parameter_x, parameter_y
+                )
+        else:
+            escape_function = self.jit_function
 
-class JuliaSetJIT(EscapeFractal):
-    def __init__(self, max_iterations: int, parameter: ComplexPoint):
-        super().__init__(max_iterations=max_iterations, parameter=parameter)
+            @njit
+            def bound_escape_function(input_x: float, input_y: float) -> int:
+                return escape_function(
+                    input_x, input_y, max_iterations, parameter_x, parameter_y
+                )
 
-    def build_escape_function(self):
-        @jit
-        def escape_function(input_x: float, input_y: float) -> int:
-            return julia_escape_jit(
-                input_x,
-                input_y,
-                self.max_iterations,
-                self.parameter.x,
-                self.parameter.y,
-            )
-
-        return escape_function
-
-
-class JuliaSetGPU(EscapeFractal):
-    def __init__(self, max_iterations: int, parameter: ComplexPoint):
-        super().__init__(max_iterations=max_iterations, parameter=parameter)
+        return bound_escape_function

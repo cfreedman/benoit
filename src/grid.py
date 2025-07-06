@@ -28,30 +28,9 @@ class ComplexPoint:
 
 
 @dataclass
-class Interval:
-    min_value: float
-    max_value: float
-
-    def length(self):
-        return self.max_value - self.min_value
-
-
-@dataclass
-class Box:
-    x_interval: Interval
-    y_interval: Interval
-
-    def aspect_ratio(self):
-        return self.y_interval.length() / self.x_interval.length()
-
-
-@dataclass
 class GridPoints:
     x_grid: np.ndarray
     y_grid: np.ndarray
-
-    x_matrix: np.ndarray
-    y_matrix: np.ndarray
 
     def steps(self) -> Tuple[float, float]:
         # Assumes that there are at least two elements in each grid
@@ -61,20 +40,14 @@ class GridPoints:
         return x_step, y_step
 
 
-@dataclass
-class GridHalfSteps:
-    x: float
-    y: float
-
-
 def generate_grid(
     x_center: float,
     y_center: float,
     x_length: float,
     y_length: float,
-    x_divisions: int,
-    y_divisions: int,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    x_divisions: int = 5,
+    y_divisions: int = 5,
+) -> Tuple[np.ndarray, np.ndarray]:
     x_half_length, y_half_length = x_length / 2, y_length / 2
 
     x_min, y_min = x_center - x_half_length, y_center - y_half_length
@@ -88,15 +61,7 @@ def generate_grid(
     x_grid = np.linspace(x_start, x_end, x_divisions)
     y_grid = np.linspace(y_start, y_end, y_divisions)
 
-    x_matrix = np.empty(shape=(x_divisions, y_divisions))
-    y_matrix = np.empty(shape=(x_divisions, y_divisions))
-
-    for i in range(x_divisions):
-        for j in range(y_divisions):
-            x_matrix[i, j] = x_grid[i]
-            y_matrix[i, j] = y_grid[j]
-
-    return x_grid, y_grid, x_matrix, y_matrix
+    return x_grid, y_grid
 
 
 def generate_square_grid(
@@ -105,7 +70,10 @@ def generate_square_grid(
     # Adjust for higher line height than single character width?
     # height = math.ceil(aspect_ratio * width / CHARACTER_ASPECT_RATIO)
 
-    x_grid, y_grid, x_matrix, y_matrix = generate_grid(
+    (
+        x_grid,
+        y_grid,
+    ) = generate_grid(
         x_center=center.x,
         y_center=center.y,
         x_length=side_length,
@@ -114,37 +82,4 @@ def generate_square_grid(
         y_divisions=int(divisions / 2),
     )
 
-    return GridPoints(x_grid, y_grid, x_matrix, y_matrix)
-
-
-def generate_sample_grid(
-    center: ComplexPoint,
-    half_steps: GridHalfSteps,
-    x_divisions: int = 5,
-    y_divisions: int = 5,
-) -> GridPoints:
-    x_interval = Interval(center.x - half_steps.x, center.x + half_steps.x)
-    y_interval = Interval(center.y - half_steps.y, center.y + half_steps.y)
-
-    x_unit_width = x_interval.length() / x_divisions
-    y_unit_width = y_interval.length() / y_divisions
-
-    x_halfstep_width, y_halfstep_width = x_unit_width / 2, y_unit_width / 2
-
-    x_grid = np.linspace(
-        start=x_interval.min_value + x_halfstep_width,
-        stop=x_interval.max_value - x_halfstep_width,
-        num=x_divisions,
-    )
-
-    y_grid = np.linspace(
-        start=y_interval.min_value + y_halfstep_width,
-        stop=y_interval.max_value - y_halfstep_width,
-        num=y_divisions,
-    )
-
-    x_matrix, y_matrix = np.meshgrid(x_grid, y_grid, indexing="ij")
-
-    grid = GridPoints(x_grid, y_grid, x_matrix, y_matrix)
-
-    return grid
+    return GridPoints(x_grid, y_grid)

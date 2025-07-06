@@ -1,17 +1,15 @@
 import argparse
-import time
 
-from numba.extending import is_jitted
-
+from src.ascii import get_ascii
 from src.grid import (
     ComplexPoint,
-    GridPoints,
     generate_grid,
     generate_square_grid,
 )
 from src.julia import JuliaSet
-from src.mandelbrot import Mandelbrot, MandelbrotJIT
-from src.render import Renderer
+from src.lyapunov import Lyapunov
+from src.mandelbrot import Mandelbrot
+from src.render import render
 
 
 def main():
@@ -20,13 +18,19 @@ def main():
         description="ASCII rendering of common fractals and Lindenmayer systems",
     )
 
-    parser.add_argument("fractal", choices=["mandelbrot", "julia"])
+    parser.add_argument("fractal", choices=["mandelbrot", "julia", "lyapunov"])
     parser.add_argument(
         "-p",
         "--parameter",
         nargs=2,
         type=float,
         help="The parameter point in complex space for defining the particular Julia set.",
+    )
+    parser.add_argument(
+        "-q",
+        "--sequence",
+        type=str,
+        help="The sequence parameter for calculating the Lyapunov fractal e.g. ABAABA",
     )
 
     parser.add_argument(
@@ -67,57 +71,61 @@ def main():
         "-m", "--mode", choices=["normal", "jit", "gpu"], default="normal"
     )
 
-    # args = parser.parse_args("mandelbrot --point -3 -1".split())
-    # print(args)
-    # parser.print_help()
-
     args = parser.parse_args()
 
-    # if args.fractal == "julia" and not args.parameter:
-    #     parser.error("Parameter point --parameter is required for a Julia fractal.")
+    if args.fractal == "julia" and not args.parameter:
+        parser.error("Parameter point --parameter is required for a Julia fractal.")
+    if args.fractal == "lyapunov":
+        if not args.sequence:
+            parser.error("Sequence --sequence is required for a Lyapunov fractal.")
 
-    # fractal = (
-    #     Mandelbrot(max_iterations=args.iterations)
-    #     if args.fractal == "mandelbrot"
-    #     else JuliaSet(
-    #         max_iterations=args.iterations,
-    #         parameter_x=args.parameter[0],
-    #         parameter_y=args.parameter[1],
-    #     )
-    # )
+        x_center, y_center = args.center[0], args.center[1]
+        size = args.size
 
-    # center = ComplexPoint(x=args.center[0], y=args.center[1])
-    # size = args.size
-    # divisions = args.divisions
-    # # grid = generate_square_grid(start=start_point, size=size, divisions=divisions)
+        x_min, x_max = x_center - size / 2.0, x_center + size / 2.0
+        y_min, y_max = y_center - size / 2.0, y_center + size / 2.0
 
-    # grid = generate_square_grid(center=center, side_length=size, divisions=divisions)
+        if x_min < 0 or y_min < 0 or x_max > 4 or y_max > 4:
+            parser.error(
+                "Viewing box for Lyapunov fractal must be contained with [0,4] x [0,4] region. Choose --center and --size inputs according to this restriction."
+            )
+    max_iterations = args.iterations
+    mode = args.mode
 
-    # renderer = Renderer(fractal=fractal, grid=grid, mode="normal")
-    # renderer.render()
+    fractal = (
+        Mandelbrot(max_iterations=args.iterations)
+        if args.fractal == "mandelbrot"
+        else JuliaSet(
+            max_iterations=args.iterations,
+            parameter=ComplexPoint(x=args.parameter[0], y=args.parameter[1]),
+        )
+        if args.fractal == "julia"
+        else Lyapunov(max_iterations=args.iterations, sequence=args.sequence)
+    )
 
-    fractal = Mandelbrot(max_iterations=1000)
-    escape_function = fractal.build_escape_function(1000, mode="normal")
+    average_escape_function = fractal.build_average_escape_function(mode=mode)
 
-    print(is_jitted(escape_function))
+    center = ComplexPoint(x=args.center[0], y=args.center[1])
+    size = args.size
+    divisions = args.divisions
 
-    new_fractal = MandelbrotJIT(max_iterations=1000)
-    new_escape_function = new_fractal.build_escape_function(1000, mode="jit")
-    print(is_jitted(new_escape_function))
+    grid = generate_square_grid(center=center, side_length=size, divisions=divisions)
 
-    # Warm up
-    escape_function(0.0, 0.0)
-    new_escape_function(0.0, 0.0)
+    results = render(
+        x_grid=grid.x_grid,
+        y_grid=grid.y_grid,
+        sample_grid_function=generate_grid,
+        average_escape_function=average_escape_function,
+    )
 
-    start = time.time()
-    for i in range(100):
-        escape_function(0.0, 0.0)
-    print(time.time() - start)
-
-    start = time.time()
-    for i in range(100):
-        new_escape_function(0.0, 0.0)
-    print(time.time() - start)
+    for j in range(len(grid.y_grid)):
+        line = "".join(
+            [
+                get_ascii(value=value, max_iterations=max_iterations)
+                for value in results[j, :]
+            ]
+        )
+        print(line)
 
 
 if __name__ == "__main__":
