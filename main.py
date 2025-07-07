@@ -9,6 +9,7 @@ from src.grid import (
 from src.julia import JuliaSet
 from src.lyapunov import Lyapunov
 from src.mandelbrot import Mandelbrot
+from src.burning_ship import BurningShip
 from src.render import render
 
 
@@ -103,6 +104,8 @@ def main():
         )
         if args.fractal == "julia"
         else Lyapunov(max_iterations=args.iterations, sequence=args.sequence)
+        if args.fractal == "lyapunov"
+        else BurningShip(max_iterations=args.iterations)  # type: ignore
     )
 
     average_escape_function = fractal.build_average_escape_function(mode=mode)

@@ -1,3 +1,4 @@
+from typing import Callable, Literal
 from src.escape_fractal import EscapeFractal
 
 from numba import njit
@@ -39,3 +40,19 @@ class BurningShip(EscapeFractal):
             base_function=burning_ship_escape,
             jit_function=burning_ship_escape_jit,
         )
+
+    def _make_escape_function(self, mode: Literal["normal", "jit", "gpu"]) -> Callable:
+        max_iterations = self.max_iterations
+
+        if mode == "normal":
+
+            def bound_escape_function(input_x: float, input_y: float) -> int:
+                return self.base_function(input_x, input_y, max_iterations)
+        else:
+            escape_function = self.jit_function
+
+            @njit
+            def bound_escape_function(input_x: float, input_y: float) -> int:
+                return escape_function(input_x, input_y, max_iterations)
+
+        return bound_escape_function

@@ -15,7 +15,7 @@ def lyapunov_escape(
     for i in range(max_iterations):
         r_loop = input_x if (i % sequence_length) % 2 == 0 else input_y
         if i > 0:
-            total += np.log(abs(r_loop * (1 - 2 * x_loop)))
+            total += np.log2(abs(r_loop * (1 - 2 * x_loop)))
         x_loop = r_loop * x_loop * (1 - x_loop)
 
     return total

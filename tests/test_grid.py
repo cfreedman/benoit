@@ -1,4 +1,4 @@
-from src.grid import Box, ComplexPoint, Interval
+from src.grid import ComplexPoint, generate_grid
 
 
 def test_complex_point():
@@ -9,16 +9,14 @@ def test_complex_point():
     assert a.length_squared() == 5
 
 
-def test_interval():
-    interval = Interval(min_value=0, max_value=5)
+def test_generate_grid():
+    x_grid, y_grid = generate_grid(0, 0, 2, 2, x_divisions=5, y_divisions=5)
 
-    assert interval.length() == 5
+    assert len(x_grid) == 5
+    assert len(y_grid) == 5
 
+    assert x_grid[0] == -0.8
+    assert x_grid[-1] == 0.8
 
-def test_box():
-    x_interval = Interval(min_value=0, max_value=5)
-    y_interval = Interval(min_value=0, max_value=3)
-
-    box = Box(x_interval, y_interval)
-
-    assert box.aspect_ratio() == 3 / 5
+    assert y_grid[0] == -0.8
+    assert y_grid[-1] == 0.8
