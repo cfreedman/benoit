@@ -18,7 +18,9 @@ def main():
         description="ASCII rendering of common fractals and Lindenmayer systems",
     )
 
-    parser.add_argument("fractal", choices=["mandelbrot", "julia", "lyapunov"])
+    parser.add_argument(
+        "fractal", choices=["mandelbrot", "julia", "lyapunov", "burningship"]
+    )
     parser.add_argument(
         "-p",
         "--parameter",
@@ -117,6 +119,8 @@ def main():
         sample_grid_function=generate_grid,
         average_escape_function=average_escape_function,
     )
+
+    print(results)
 
     for j in range(len(grid.y_grid)):
         line = "".join(
